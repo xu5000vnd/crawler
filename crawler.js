@@ -4,11 +4,13 @@ const mongoose = require('mongoose');
 const { mongoURI } = require('./config/keys');
 require('./models/Mapping');
 require('./models/Product');
+require('./models/User');
 
 mongoose.connect(mongoURI);
 const MappingModel = mongoose.model('mapping');
 const PoductModel = mongoose.model('products');
-MappingModel.find({}, (err, result) => {
+const UserModel = mongoose.model('users');
+UserModel.find({}, (err, result) => {
   if (err) throw err;
   console.log(result);
 });
