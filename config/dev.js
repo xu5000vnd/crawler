@@ -1,6 +1,7 @@
-// const MongoDBUser = process.env.MONGO_DB_USER;
-// const MongoDBPassword = process.env.MONGO_DB_PASS;
+const MongoDBUser = process.env.MONGO_DB_USER || 'root';
+const MongoDBPassword = process.env.MONGO_DB_PASS || 'singbui123';
 module.exports = {
-    // mongoURI: `mongodb+srv://${MongoDBUser}:${MongoDBPassword}@cluster0-ejsgu.mongodb.net/test?retryWrites=true`,,
-    mongoURI: 'mongodb://horison:456456@ds247027.mlab.com:47027/nodejs-email'
+    mongoURI: `mongodb://${MongoDBUser}:${MongoDBPassword}@ds151523.mlab.com:51523/crawler`,
+    crawlerURL: 'https://klook.klktech.com/activity/',
+    crawlerURLLogin: 'https://klook.klktech.com/signin'
 };
