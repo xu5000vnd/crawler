@@ -25,104 +25,141 @@ const MappingModel = mongoose.model('mappings');
   }
 
   if (username !== '' && password !== '') {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: false });
+    let linkIdStop = 0;
     const login = async () => {
       const page = await browser.newPage();
       await page.goto(keys.crawlerURLLogin);
+      await page.waitFor(2000);
+      if (await page.$('div.header__nav__item.nav__user')) {
+        return true;
+      }
+
       await page.type('#username', username);
       await page.type('#password', password);
+      await page.click('#remember');
       await page.click('form.signin-box button');
       await page.waitFor(2000);
-      await page.waitForNavigation();
-
       const loggedIn = await page.evaluate(() => { //eslint-disable-line
         return {
           state: document.querySelector('div.header__nav__item.nav__user') ? true : false //eslint-disable-line
         };
       });
-      page.close();
-
+      await page.close();
       return loggedIn.state;
-
-      // await page.waitForSelector('.package .pkg_list>li .g_right button');
-      // await page.click('.package .pkg_list>li .g_right button');
-      // await page.waitFor(1000);
-      // await page.click('.package .pkg_list>li .package_select .j_pkg_date');
-      // await page.waitFor(1000);
-      // await page.click('#pkg_datepicker .datepicker-days th.next');
-      // await page.click('#pkg_datepicker .datepicker-days td.day');
-      // await page.waitFor(1000);
-      // await page.click('.package .pkg_list>li .package_select .j_pkg_time');
-      // await page.click('.package .pkg_list>li .package_select .j_pkg_time ul.time_dropdown>li');
-      // await page.waitFor(2000);
-      // await page.click('.package .pkg_list>li .package_select .quantity');
-
-
-      // const result = await page.evaluate(() => {
-      //   let listEle = $('.package .pkg_list>li .package_select .unit_list ul li.j_price_item');
-      //   return {
-      //     title: $('title').text(),
-      //     priceAdult: $(listEle[0]).data('price'),
-      //     priceChild: $(listEle[1]).data('price'),
-      //     priceElderly: $(listEle[2]).data('price'),
-      //   }
-      // });
     };
 
-    const checkLogin = async (page) => {
-      if (await page.$('div.header__nav__item.nav__user')) {
-        return true;
+    const getPackagePriceDetail = async (arrangementId) => {
+      const prices = [];
+      const linkPackagePriceDetail = `https://klook.klktech.com/v1/agentwebserv/arrangements/${arrangementId}/units`;
+      console.log('linkPackagePriceDetail: ', linkPackagePriceDetail);
+      const page = await browser.newPage();
+      await page.goto(linkPackagePriceDetail);
+      await page.waitFor(2000);
+      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
+      const content = await page.evaluate(() => { //eslint-disable-line
+        return {
+          text: $('pre').text()
+        };
+      });
+      const packagePriceDetail = JSON.parse(content.text);
+      if (packagePriceDetail.success) {
+        _.each(packagePriceDetail.result.prices, price => {
+          prices.push({
+            market_price: price.market_price,
+            price: price.price,
+            name: price.name
+          });
+        });
+      }
+      // await page.close();
+      return prices;
+    };
+
+    const getPackageDetail = async (item) => {
+      let data = {};
+      const packageId = item.package_id;
+      const linkPackageDetail = `https://klook.klktech.com/v1/usrcsrv/packages/${packageId}/schedules`;
+      console.log('linkPackageDetail: ', linkPackageDetail);
+      const page = await browser.newPage();
+      await page.waitFor(3000);
+      await page.goto(linkPackageDetail);
+      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
+      console.log('addScriptTag');
+      const content = await page.evaluate(() => { //eslint-disable-line
+        return {
+          text: $('pre').text()
+        };
+      });
+      console.log('get Text');
+      const packageDetail = JSON.parse(content.text);
+      console.log(packageDetail.result[0].arrangement_id);
+      if (packageDetail.success) {
+        const prices = await getPackagePriceDetail(packageDetail.result[0].arrangement_id);
+        const date = packageDetail.result[0].date;
+        data = {
+          prices,
+          date,
+          packageId,
+          packageName: item.package_name
+        };
       }
 
-      return false;
+      // await page.close();
+      return await data;
     };
 
-    let linkIdStop = 0;
-    const crawlPrices = async ({ linkId }, i) => {
-      const link = keys.crawlerURL + linkId;
-      const linkPackages = `https://klook.klktech.com/v1/agentwebserv/activity/${linkId}/detail`;
-//https://klook.klktech.com/v1/usrcsrv/activity/122/schedules
-//for packages
-//https://klook.klktech.com/v1/usrcsrv/packages/2765/schedules
-//select day
-//https://klook.klktech.com/v1/agentwebserv/arrangements/21160315/units
-//https://klook.klktech.com/v1/agentwebserv/arrangements/21160864/units?_=1541325538337
+    const getProductDetail = async (productId, i) => {
+      const packagesDetail = [];
+      const linkProductDetail = `https://klook.klktech.com/v1/agentwebserv/activity/${productId}/detail`;
+      console.log('linkProductDetail: ', linkProductDetail);
       const page = await browser.newPage();
-      await page.goto(link);
-      // await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
-      if (await checkLogin) {
-        let packages = []; //eslint-disable-line
-        await page.waitForResponse((response) => {
-          if (response.url() === linkPackages) {
-            console.log(response);
-            if (response.body.success) {
-              packages = response.body.success.packages;
-            }
-          }
+      await page.goto(linkProductDetail);
+      await page.waitFor(2000);
+      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
+      const content = await page.evaluate(() => { //eslint-disable-line
+        return {
+          text: $('pre').text()
+        };
+      });
+      const productDetail = JSON.parse(content.text);
+      if (productDetail.success) {
+        _.each(productDetail.result.packages, async (item) => {
+          const packageDetail = await getPackageDetail(item);
+          packagesDetail.push(packageDetail);
         });
       } else {
+        //login
         linkIdStop = i;
-        login();
       }
-      page.close();
+
+      // await page.close();
+      return packagesDetail;
     };
 
-    if (await login) {
+    //run Crawler
+    if (await login()) {
       const mappings = await MappingModel.find({});
       if (mappings) {
-        for (let i = 0; i < mappings.length; i++) {
-          if (linkIdStop) {
-            i = linkIdStop;
-          }
+        // for (let i = 0; i < mappings.length; i++) {
+        //   if (linkIdStop) {
+        //     i = linkIdStop;
+        //   }
 
-          crawlPrices(mappings[i], i);
-        }
+        //   const data = await getProductDetail(mappings[i].linkId, i);
+        //   console.log('=====get product=====');
+        //   console.log(data);
+        // }
+        await getProductDetail(199);
+        console.log('getProductDetail');
+
       } else {
         console.log('Mapping Empty');
       }
     } else {
       console.log('login failed');
     }
+
     // await browser.close();
   }
 })();
