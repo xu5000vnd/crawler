@@ -1,17 +1,12 @@
 const mongoose = require('mongoose');
+const priceSchema = require('./Price');
 
 const { Schema } = mongoose;
-
 const packageSchema = new Schema({
-  title: String,
-  marketPriceAdult: String,
-  priceAdult: String,
-  marketPriceChild: String,
-  priceChild: String,
-  marketPriceElderly: String,
-  priceElderly: String,
-  time: String,
+  packageId: String,
+  packageName: String,
+  prices: [priceSchema],
   date: Date
 });
 
-mongoose.model('package', packageSchema);
+mongoose.model('packages', packageSchema);

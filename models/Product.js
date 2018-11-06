@@ -3,7 +3,8 @@ const packageSchema = require('./Package');
 
 const { Schema } = mongoose;
 const productSchema = new Schema({
-  productId: String,
+  id: String,
+  name: String,
   packages: [packageSchema],
   saved: { type: Number, default: 0 }
 });

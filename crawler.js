@@ -6,12 +6,10 @@ const mongoose = require('mongoose');
 const keys = require('./config/keys');
 require('./models/User');
 require('./models/Mapping');
-require('./models/Product');
 
 mongoose.connect(keys.mongoURI);
 const User = mongoose.model('users');
 const MappingModel = mongoose.model('mappings');
-// const ProductsModel = mongoose.model('products');
 
 (async () => {
   let username = '';
@@ -161,7 +159,7 @@ const MappingModel = mongoose.model('mappings');
     products.push(']');
     await browser.close();
 
-    fs.writeFile('./output/crawlerdata.json', products.join('\n'), (err, res) => {
+    fs.writeFile('./output/crawlerdata.json', products.join('\n'), (err, res) => { //eslint-disable-line
       if (err) {
         throw err;
       }
