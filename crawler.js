@@ -1,5 +1,6 @@
 require('dotenv').load();
 const _ = require('lodash');
+const fs = require('fs');
 const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
 const keys = require('./config/keys');
@@ -25,16 +26,11 @@ const MappingModel = mongoose.model('mappings');
   }
 
   if (username !== '' && password !== '') {
-    const browser = await puppeteer.launch({ headless: false });
-    let linkIdStop = 0;
+    const browser = await puppeteer.launch({ headless: true });
     const login = async () => {
       const page = await browser.newPage();
       await page.goto(keys.crawlerURLLogin);
       await page.waitFor(2000);
-      if (await page.$('div.header__nav__item.nav__user')) {
-        return true;
-      }
-
       await page.type('#username', username);
       await page.type('#password', password);
       await page.click('#remember');
@@ -54,12 +50,14 @@ const MappingModel = mongoose.model('mappings');
       const linkPackagePriceDetail = `https://klook.klktech.com/v1/agentwebserv/arrangements/${arrangementId}/units`;
       console.log('linkPackagePriceDetail: ', linkPackagePriceDetail);
       const page = await browser.newPage();
+      await page.setExtraHTTPHeaders({
+        'accept-language': 'en_US'
+      });
       await page.goto(linkPackagePriceDetail);
       await page.waitFor(2000);
-      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
-          text: $('pre').text()
+          text: document.getElementsByTagName('pre')[0].innerText
         };
       });
       const packagePriceDetail = JSON.parse(content.text);
@@ -71,9 +69,9 @@ const MappingModel = mongoose.model('mappings');
             name: price.name
           });
         });
+        await page.close();
+        return prices;
       }
-      // await page.close();
-      return prices;
     };
 
     const getPackageDetail = async (item) => {
@@ -82,18 +80,16 @@ const MappingModel = mongoose.model('mappings');
       const linkPackageDetail = `https://klook.klktech.com/v1/usrcsrv/packages/${packageId}/schedules`;
       console.log('linkPackageDetail: ', linkPackageDetail);
       const page = await browser.newPage();
-      await page.waitFor(3000);
+      await page.setExtraHTTPHeaders({
+        'accept-language': 'en_US'
+      });
       await page.goto(linkPackageDetail);
-      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
-      console.log('addScriptTag');
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
-          text: $('pre').text()
+          text: document.getElementsByTagName('pre')[0].innerText
         };
       });
-      console.log('get Text');
       const packageDetail = JSON.parse(content.text);
-      console.log(packageDetail.result[0].arrangement_id);
       if (packageDetail.success) {
         const prices = await getPackagePriceDetail(packageDetail.result[0].arrangement_id);
         const date = packageDetail.result[0].date;
@@ -103,56 +99,53 @@ const MappingModel = mongoose.model('mappings');
           packageId,
           packageName: item.package_name
         };
+        await page.close();
+        return data;
       }
-
-      // await page.close();
-      return await data;
     };
 
-    const getProductDetail = async (productId, i) => {
+    const getProductDetail = async (productId) => {
       const packagesDetail = [];
       const linkProductDetail = `https://klook.klktech.com/v1/agentwebserv/activity/${productId}/detail`;
       console.log('linkProductDetail: ', linkProductDetail);
       const page = await browser.newPage();
+      await page.setExtraHTTPHeaders({
+        'accept-language': 'en_US'
+      });
       await page.goto(linkProductDetail);
-      await page.waitFor(2000);
-      await page.addScriptTag({ url: 'https://code.jquery.com/jquery-3.3.1.min.js' });
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
-          text: $('pre').text()
+          text: document.getElementsByTagName('pre')[0].innerText
         };
       });
       const productDetail = JSON.parse(content.text);
       if (productDetail.success) {
-        _.each(productDetail.result.packages, async (item) => {
+        for (let i = 0; i < productDetail.result.packages.length; i++) {
+          const item = productDetail.result.packages[i];
           const packageDetail = await getPackageDetail(item);
           packagesDetail.push(packageDetail);
-        });
-      } else {
-        //login
-        linkIdStop = i;
+        }
+        await page.close();
+        return packagesDetail;
       }
-
-      // await page.close();
-      return packagesDetail;
     };
 
+    const products = [];
+    products.push('[');
     //run Crawler
     if (await login()) {
       const mappings = await MappingModel.find({});
       if (mappings) {
-        // for (let i = 0; i < mappings.length; i++) {
-        //   if (linkIdStop) {
-        //     i = linkIdStop;
-        //   }
-
-        //   const data = await getProductDetail(mappings[i].linkId, i);
-        //   console.log('=====get product=====');
-        //   console.log(data);
-        // }
-        await getProductDetail(199);
-        console.log('getProductDetail');
-
+        for (let i = 0; i < mappings.length; i++) {
+          const product = {};
+          product.id = mappings[i].activityId;
+          product.packages = await getProductDetail(mappings[i].activityId);
+          if (i === mappings.length - 1) {
+            products.push(`${JSON.stringify(product)}`);
+          } else {
+            products.push(`${JSON.stringify(product)},`);
+          }
+        }
       } else {
         console.log('Mapping Empty');
       }
@@ -160,6 +153,14 @@ const MappingModel = mongoose.model('mappings');
       console.log('login failed');
     }
 
-    // await browser.close();
+    products.push(']');
+    await browser.close();
+
+    fs.writeFile('./output/crawlerdata.json', products.join('\n'), (err, res) => {
+      if (err) {
+        throw err;
+      }
+      console.log('---Finished write data -----');
+    });
   }
 })();

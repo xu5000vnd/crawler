@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const mappingSchema = new Schema({
   productId: String,
-  linkId: String,
+  activityId: String,
 });
 
 mongoose.model('mappings', mappingSchema);
