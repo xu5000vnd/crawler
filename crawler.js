@@ -94,10 +94,10 @@ const MappingModel = mongoose.model('mappings');
         const prices = await getPackagePriceDetail(packageDetail.result[0].arrangement_id);
         const date = packageDetail.result[0].date;
         data = {
-          prices,
-          date,
           packageId,
-          packageName: item.package_name
+          packageName: item.package_name,
+          prices,
+          date
         };
         await page.close();
         return data;
@@ -126,7 +126,10 @@ const MappingModel = mongoose.model('mappings');
           packagesDetail.push(packageDetail);
         }
         await page.close();
-        return packagesDetail;
+        return {
+          productName: productDetail.result.title,
+          packages: packagesDetail
+        };
       }
     };
 
@@ -139,7 +142,9 @@ const MappingModel = mongoose.model('mappings');
         for (let i = 0; i < mappings.length; i++) {
           const product = {};
           product.id = mappings[i].activityId;
-          product.packages = await getProductDetail(mappings[i].activityId);
+          const packagesDetail = await getProductDetail(mappings[i].activityId);
+          product.name = packagesDetail.productName;
+          product.packages = packagesDetail.packages;
           if (i === mappings.length - 1) {
             products.push(`${JSON.stringify(product)}`);
           } else {
