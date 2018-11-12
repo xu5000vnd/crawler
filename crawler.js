@@ -3,14 +3,18 @@ const _ = require('lodash');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 const mongoose = require('mongoose');
+const { exec } = require('child_process');
 const keys = require('./config/keys');
 require('./models/User');
 require('./models/Mapping');
+require('./models/Setting');
 
 mongoose.connect(keys.mongoURI);
 const User = mongoose.model('users');
 const MappingModel = mongoose.model('mappings');
+const SettingModel = mongoose.model('settings');
 
+console.log('====start crawl=====');
 (async () => {
   let username = '';
   let password = '';
@@ -164,6 +168,12 @@ const MappingModel = mongoose.model('mappings');
         throw err;
       }
       console.log('---Finished write data -----');
+
+      exec('node saveProducts.js', (err, stdout, stderr) => {//eslint-disable-line
+        //do stuff
+      });
     });
   }
+
+  await SettingModel.findOneAndUpdate({ name: 'state' }, { $set: { value: 0 } });
 })();
