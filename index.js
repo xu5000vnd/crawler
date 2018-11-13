@@ -12,14 +12,13 @@ mongoose.connect(keys.mongoURI);
 
 const MappingModel = mongoose.model('mappings');
 const ProductioModel = mongoose.model('products');
-const SettingModel = mongoose.model('settings');
-const LogModel = mongoose.model('logs');
+// const SettingModel = mongoose.model('settings');
+// const LogModel = mongoose.model('logs');
 
 const app = express();
 
-const handleCallCrawler = (req, res, next) => {
-  if (//req.headers.origin === 'https://singbui.com'
-    1) {
+const handleCallCrawler = (req, res, next) => { //eslint-disable-line
+  if (req.headers.origin === 'https://singbui.com') {
     next();
   } else {
     const resAPI = Utils.resAPI();
@@ -69,23 +68,23 @@ const CronJob = require('node-cron');
 * Day of Week: 0-6 (Sun-Sat)
 * set run once a week on Saturday (0 0 0 * * 6)
 */
-const job = CronJob.schedule('0 */5 * * * *',
-  () => {
-    console.log('Set run cmd once a week');
-    console.log(Date(Date.now()));
-    exec('node crawler.js', (err, res) => {
-      if (err) {
-        console.log(err);
-      }
+// const job = CronJob.schedule('0 */5 * * * *',
+//   () => {
+//     console.log('Set run cmd once a week');
+//     console.log(Date(Date.now()));
+//     exec('node crawler.js', (err, res) => {
+//       if (err) {
+//         console.log(err);
+//       }
 
-      console.log('===Finished cronjob crawler===');
-    });
-  },
-  {
-    scheduled: true
-  }
-);
-job.start();
+//       console.log('===Finished cronjob crawler===');
+//     });
+//   },
+//   {
+//     scheduled: true
+//   }
+// );
+// job.start();
 //====Cronjob====
 
 const PORT = process.env.PORT || 3000;

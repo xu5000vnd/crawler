@@ -28,10 +28,10 @@ console.log('====start crawl=====');
   }
 
   if (username !== '' && password !== '') {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: false });
     const login = async () => {
       const page = await browser.newPage();
-      await page.goto(keys.crawlerURLLogin);
+      await page.goto(keys.crawlerURLLogin, { timeout: 60000 });
       await page.waitFor(2000);
       await page.type('#username', username);
       await page.type('#password', password);
@@ -55,7 +55,7 @@ console.log('====start crawl=====');
       await page.setExtraHTTPHeaders({
         'accept-language': 'en_US'
       });
-      await page.goto(linkPackagePriceDetail);
+      await page.goto(linkPackagePriceDetail, { timeout: 60000 });
       await page.waitFor(2000);
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
@@ -85,7 +85,7 @@ console.log('====start crawl=====');
       await page.setExtraHTTPHeaders({
         'accept-language': 'en_US'
       });
-      await page.goto(linkPackageDetail);
+      await page.goto(linkPackageDetail, { timeout: 60000 });
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
           text: document.getElementsByTagName('pre')[0].innerText
@@ -114,7 +114,7 @@ console.log('====start crawl=====');
       await page.setExtraHTTPHeaders({
         'accept-language': 'en_US'
       });
-      await page.goto(linkProductDetail);
+      await page.goto(linkProductDetail, { timeout: 60000 });
       const content = await page.evaluate(() => { //eslint-disable-line
         return {
           text: document.getElementsByTagName('pre')[0].innerText
@@ -147,6 +147,7 @@ console.log('====start crawl=====');
           const packagesDetail = await getProductDetail(mappings[i].activityId);
           product.name = packagesDetail.productName;
           product.packages = packagesDetail.packages;
+          product.dateTime = Date(Date.now());
           if (i === mappings.length - 1) {
             products.push(`${JSON.stringify(product)}`);
           } else {
@@ -169,8 +170,12 @@ console.log('====start crawl=====');
       }
       console.log('---Finished write data -----');
 
-      exec('node saveProducts.js', (err, stdout, stderr) => {//eslint-disable-line
+      exec('node saveProducts.js', (err, res) => {//eslint-disable-line
+        if (err) {
+          console.log(err);
+        }
         //do stuff
+        console.log('---Finished storage to database -----');
       });
     });
   }

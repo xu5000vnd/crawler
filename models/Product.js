@@ -6,7 +6,7 @@ const productSchema = new Schema({
   id: String,
   name: String,
   packages: [packageSchema],
-  saved: { type: Number, default: 0 }
+  dateTime: String
 });
 
 mongoose.model('products', productSchema);
