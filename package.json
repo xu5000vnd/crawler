@@ -16,6 +16,7 @@
     "express": "^4.16.4",
     "lodash": "^4.17.11",
     "mongoose": "^5.3.8",
+    "node-cron": "^2.0.3",
     "puppeteer": "^1.9.0"
   }
 }

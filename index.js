@@ -17,7 +17,6 @@ const LogModel = mongoose.model('logs');
 
 const app = express();
 
-
 const handleCallCrawler = (req, res, next) => {
   if (//req.headers.origin === 'https://singbui.com'
     1) {
@@ -59,36 +58,35 @@ app.get('/api/klook/posts/:postId', async (req, res) => {
   }
 });
 
-app.post('/api/klook/crawler', handleCallCrawler, async (req, res) => {
-  try {
-    console.log('run /api/klook/crawler');
-    await SettingModel.findOneAndUpdate({ name: 'state' }, { $set: { value: 1 } });
-    console.log('run cmd');
-    exec('node crawler.js', (err, stdout, stderr) => { //eslint-disable-line
+//====Cronjob====
+const CronJob = require('node-cron');
+/*
+* Seconds: 0-59
+* Minutes: 0-59
+* Hours: 0-23
+* Day of Month: 1-31
+* Months: 0-11 (Jan-Dec)
+* Day of Week: 0-6 (Sun-Sat)
+* set run once a week on Saturday (0 0 0 * * 6)
+*/
+const job = CronJob.schedule('0 */5 * * * *',
+  () => {
+    console.log('Set run cmd once a week');
+    console.log(Date(Date.now()));
+    exec('node crawler.js', (err, res) => {
       if (err) {
         console.log(err);
       }
-      //do stuff
-      console.log('finished cmd');
+
+      console.log('===Finished cronjob crawler===');
     });
-
-    const resAPI = Utils.resAPI();
-    resAPI.success = true;
-    res.send(resAPI);
-  } catch (error) {
-    throw error;
+  },
+  {
+    scheduled: true
   }
-});
-
-app.get('/api/klook/state', async (req, res) => {
-  const state = await SettingModel.findOne({ name: 'state' });
-  const resAPI = Utils.resAPI();
-  if (state) {
-    resAPI.result.push(state);
-  }
-  resAPI.success = true;
-  res.send(resAPI);
-});
+);
+job.start();
+//====Cronjob====
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT);
